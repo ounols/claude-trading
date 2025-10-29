@@ -56,8 +56,14 @@ jobs:
       - name: Prepare trading data
         env:
           TRADING_DATE: ${{ inputs.trading_date }}
-          USE_ALPACA: 'true'
+          # Trading mode configuration
           SIMULATION_MODE: 'false'
+          USE_ALPACA: 'true'
+          CONFIRM_REAL_TRADING: 'true'
+          # Alpaca API credentials (only used if USE_ALPACA=true)
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          ALPACA_PAPER: 'true'
         run: |
           python prepare_trading_data.py
 
