@@ -258,13 +258,20 @@ class TradeExecutor:
 
         if not actions:
             print("\n📊 No trades (HOLD)")
-            # 거래 없음 기록
+            # 거래 없음 기록 - position 파일에도 기록하여 git 변경사항 발생
+            self.position_dir.mkdir(parents=True, exist_ok=True)
             with open(self.position_file, "a") as f:
                 f.write(json.dumps({
                     "datetime": trading_datetime,
                     "date": date,
                     "id": current_id + 1,
-                    "this_action": {"action": "no_trade", "symbol": "", "amount": 0},
+                    "this_action": {
+                        "action": "hold",
+                        "symbol": "",
+                        "amount": 0,
+                        "reason": analysis[:200] if len(analysis) <= 200 else analysis[:197] + "...",
+                        "mode": "alpaca" if self.use_alpaca else "simulation"
+                    },
                     "positions": current_position
                 }) + "\n")
         else:
