@@ -119,11 +119,7 @@ jobs:
 
       - name: Commit and push results
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-
           git add data/
-
           # 변경사항이 있을 때만 커밋
           if git diff --staged --quiet; then
             echo "No changes to commit"
