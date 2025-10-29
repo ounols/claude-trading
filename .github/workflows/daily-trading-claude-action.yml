@@ -83,8 +83,16 @@ jobs:
                - Current portfolio positions and cash
                - Market prices for all NASDAQ 100 stocks
                - Market news (general market, sector-specific, and individual stock news)
-            3. Analyze the market data and news to make informed trading decisions
-            4. Write your trading decision to 'claude_decision.json' in the following JSON format:
+            3. (Optional) Review previous trading logs in 'data/agent_data/claude-trader/log/' folder to:
+               - Understand your past trading decisions and their outcomes
+               - Maintain consistency in your trading strategy
+               - Learn from previous market conditions and reactions
+            4. If you need additional information or clarity on any market news, company updates, or economic data:
+               - Use WebFetch to search for and gather more detailed information
+               - Verify ambiguous claims or get recent developments
+               - Research specific company fundamentals or sector trends
+            5. Analyze the market data and news to make informed trading decisions
+            6. Write your trading decision to 'claude_decision.json' in the following JSON format:
                {
                  "analysis": "Your detailed market and news analysis with specific references",
                  "actions": [
@@ -92,7 +100,7 @@ jobs:
                    {"action": "sell", "symbol": "MSFT", "amount": 5, "reason": "specific reasoning"}
                  ]
                }
-            5. If no trades are needed, use: {"analysis": "reasoning for holding", "actions": []}
+            7. If no trades are needed, use: {"analysis": "reasoning for holding", "actions": []}
 
             IMPORTANT: Base your decisions on the news content and fundamental analysis provided in the data files.
 
