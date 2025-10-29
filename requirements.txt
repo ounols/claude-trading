@@ -1,5 +1,5 @@
-# Claude Code Action 버전 Dependencies
-# API 키 불필요 - GitHub Actions의 claude-code-action 사용
+# Claude Code Action Dependencies
+# API key not required - using GitHub Actions claude-code-action
 
 # Stock Data
 yfinance>=0.2.36
@@ -16,4 +16,4 @@ python-dotenv>=1.0.0
 # Optional: For enhanced data collection
 pandas>=2.0.0
 
-# Note: anthropic 패키지 불필요 (claude-code-action 사용)
+# Note: anthropic package not required (using claude-code-action)

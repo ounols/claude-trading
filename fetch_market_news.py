@@ -1,9 +1,11 @@
 """
 Step 1.5: 시장 뉴스 수집
-Jina Search & Reader API를 사용하여 시장 및 종목 뉴스 수집
+Jina Search & Reader API를 사용하여 시장 및 섹터 뉴스 수집
+yfinance를 사용하여 종목별 뉴스 수집
 """
 
 import os
+import sys
 import json
 import requests
 from datetime import datetime, timedelta
@@ -11,6 +13,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import re
 from dotenv import load_dotenv
+import yfinance as yf
+
+# Windows 환경에서 UTF-8 출력 설정
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 # .env 파일 로드
 load_dotenv()
@@ -21,8 +28,11 @@ class MarketNewsCollector:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("JINA_API_KEY")
-        if not self.api_key:
-            raise ValueError("JINA_API_KEY not found in environment variables")
+        self.has_jina_api = bool(self.api_key)
+
+        if not self.has_jina_api:
+            print("⚠️ JINA_API_KEY not found - will skip market/sector news collection")
+            print("   Only stock-specific news (via yfinance) will be collected")
 
         self.search_url = "https://s.jina.ai/"
         self.reader_url = "https://r.jina.ai/"
@@ -147,6 +157,56 @@ class MarketNewsCollector:
             print(f"⚠️ Reader error for '{url}': {e}")
             return None
 
+    def get_stock_news_yfinance(self, symbol: str, max_news: int = 3) -> List[Dict]:
+        """yfinance를 사용하여 종목 뉴스 가져오기"""
+        try:
+            ticker = yf.Ticker(symbol)
+            news = ticker.news
+
+            if not news:
+                return []
+
+            # 최대 개수만큼만 가져오기
+            news_items = []
+            for item in news[:max_news]:
+                # 중첩된 content 구조 처리
+                content = item.get('content', {})
+
+                # pubDate를 datetime으로 변환 (ISO 8601 형식)
+                pub_date_str = content.get('pubDate', '')
+                try:
+                    if pub_date_str:
+                        # ISO 8601 형식 파싱: "2025-10-28T20:03:53Z"
+                        pub_date = datetime.fromisoformat(pub_date_str.replace('Z', '+00:00'))
+                        publish_time = pub_date.strftime('%Y-%m-%d %H:%M:%S')
+                    else:
+                        publish_time = 'unknown'
+                except Exception:
+                    publish_time = 'unknown'
+
+                # 뉴스 URL
+                canonical_url = content.get('canonicalUrl', {})
+                url = canonical_url.get('url', '')
+
+                # Provider 정보
+                provider = content.get('provider', {})
+                publisher = provider.get('displayName', 'Unknown')
+
+                news_items.append({
+                    'url': url,
+                    'title': content.get('title', 'No title'),
+                    'description': content.get('description', ''),
+                    'content': content.get('summary', ''),  # summary를 content로 사용
+                    'publish_time': publish_time,
+                    'publisher': publisher
+                })
+
+            return news_items
+
+        except Exception as e:
+            print(f"⚠️ yfinance news error for '{symbol}': {e}")
+            return []
+
     def collect_market_news(self, trading_date: str, symbols: List[str]) -> Dict:
         """시장 뉴스 및 주요 종목 뉴스 수집"""
         print(f"\n📰 Collecting market news for {trading_date}...")
@@ -162,47 +222,60 @@ class MarketNewsCollector:
             'top_stocks_news': {}
         }
 
-        # 1. 전체 시장 뉴스
-        print("\n1️⃣ Collecting general market news...")
-        market_queries = [
-            "NASDAQ stock market news today",
-            "US stock market outlook",
-            "tech stocks market analysis"
-        ]
+        # 1. 전체 시장 뉴스 (JINA API 사용 가능할 때만)
+        if self.has_jina_api:
+            print("\n1️⃣ Collecting general market news...")
+            market_queries = [
+                "NASDAQ stock market news today",
+                "US stock market outlook",
+                "tech stocks market analysis"
+            ]
 
-        for query in market_queries:
-            results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
-            for result in results[:1]:  # 각 쿼리당 1개씩만
-                article = self.read_url(result['url'])
-                if article:
-                    news_data['market_overview'].append(article)
+            for query in market_queries:
+                results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
+                for result in results[:1]:  # 각 쿼리당 1개씩만
+                    article = self.read_url(result['url'])
+                    if article:
+                        news_data['market_overview'].append(article)
 
-        # 2. 섹터 뉴스
-        print("\n2️⃣ Collecting sector news...")
-        sector_queries = [
-            "technology sector stocks",
-            "semiconductor industry news"
-        ]
+            # 2. 섹터 뉴스
+            print("\n2️⃣ Collecting sector news...")
+            sector_queries = [
+                "technology sector stocks",
+                "semiconductor industry news"
+            ]
 
-        for query in sector_queries:
-            results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
-            for result in results[:1]:
-                article = self.read_url(result['url'])
-                if article:
-                    news_data['sector_news'].append(article)
+            for query in sector_queries:
+                results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
+                for result in results[:1]:
+                    article = self.read_url(result['url'])
+                    if article:
+                        news_data['sector_news'].append(article)
+        else:
+            print("\n⏭️  Skipping market/sector news (no JINA API key)")
 
-        # 3. 주요 종목 뉴스 (시가총액 상위 10개만)
-        print("\n3️⃣ Collecting top stocks news...")
+        # 3. 주요 종목 뉴스 (시가총액 상위 10개만) - yfinance 사용
+        print("\n3️⃣ Collecting top stocks news (using yfinance)...")
         top_symbols = symbols[:10]  # 상위 10개만
 
         for symbol in top_symbols:
-            print(f"  Searching for {symbol}...")
-            results = self.search(f"{symbol} stock news", max_results=1, cutoff_date=cutoff_datetime)
+            print(f"  Fetching news for {symbol}...")
+            news_items = self.get_stock_news_yfinance(symbol, max_news=2)
 
-            if results:
-                article = self.read_url(results[0]['url'])
-                if article:
-                    news_data['top_stocks_news'][symbol] = [article]
+            if news_items:
+                # cutoff_date 이전 뉴스만 필터링
+                filtered_news = []
+                for item in news_items:
+                    if item['publish_time'] <= cutoff_datetime:
+                        filtered_news.append(item)
+
+                if filtered_news:
+                    news_data['top_stocks_news'][symbol] = filtered_news
+                    print(f"    ✓ Found {len(filtered_news)} news items")
+                else:
+                    print(f"    ⚠ No news within cutoff date")
+            else:
+                print(f"    ⚠ No news available")
 
         # 통계 출력
         print(f"\n✅ News collection complete:")
@@ -261,31 +334,15 @@ def main():
     ]
 
     # 뉴스 수집
-    try:
-        collector = MarketNewsCollector()
-        news_data = collector.collect_market_news(trading_date, symbols)
+    collector = MarketNewsCollector()
+    news_data = collector.collect_market_news(trading_date, symbols)
 
-        # JSON 파일로 저장
-        output_file = Path("market_news.json")
-        with open(output_file, "w", encoding='utf-8') as f:
-            json.dump(news_data, f, indent=2, ensure_ascii=False)
+    # JSON 파일로 저장
+    output_file = Path("market_news.json")
+    with open(output_file, "w", encoding='utf-8') as f:
+        json.dump(news_data, f, indent=2, ensure_ascii=False)
 
-        print(f"\n✅ Market news saved to: {output_file}")
-
-    except Exception as e:
-        print(f"❌ Error collecting news: {e}")
-        # 에러 시 빈 뉴스 파일 생성
-        empty_news = {
-            'trading_date': trading_date,
-            'collected_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            'market_overview': [],
-            'sector_news': [],
-            'top_stocks_news': {},
-            'error': str(e)
-        }
-        with open("market_news.json", "w", encoding='utf-8') as f:
-            json.dump(empty_news, f, indent=2, ensure_ascii=False)
-        print("⚠️ Created empty news file due to error")
+    print(f"\n✅ Market news saved to: {output_file}")
 
 
 if __name__ == "__main__":
