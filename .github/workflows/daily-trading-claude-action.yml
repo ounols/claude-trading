@@ -12,7 +12,8 @@ on:
         description: 'Trading date (YYYY-MM-DD) - leave empty for today'
         required: false
         type: string
-
+permissions:
+  contents: write
 jobs:
   trading:
     runs-on: ubuntu-latest
