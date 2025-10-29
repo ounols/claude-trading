@@ -16,6 +16,12 @@ on:
 jobs:
   trading:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write
+      actions: read
 
     steps:
       - name: Checkout code
@@ -84,6 +90,8 @@ jobs:
           claude_args: |
             --model claude-sonnet-4-5-20250929
             --max-turns 10
+            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "WebFetch" --allowed-tools "Write"
+
 
       - name: Execute trades
         env:
