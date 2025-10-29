@@ -17,7 +17,7 @@ jobs:
   trading:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write  # Changed from 'read' to 'write' to allow git push
       pull-requests: read
       issues: read
       id-token: write
