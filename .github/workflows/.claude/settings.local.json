@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "Read(//d/Projects/AI-Trader/**)"
+      "Read(//d/Projects/AI-Trader/**)",
+      "Bash(source venv/Scripts/activate)",
+      "Bash(pip uninstall:*)",
+      "Bash(pip install:*)",
+      "Bash(export PYTHONIOENCODING=utf-8)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

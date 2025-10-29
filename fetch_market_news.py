@@ -10,6 +10,10 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 import re
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 
 class MarketNewsCollector:
@@ -211,6 +215,10 @@ class MarketNewsCollector:
 
 def main():
     """메인 실행 함수"""
+    # 거래 모드 확인
+    use_alpaca = os.getenv("USE_ALPACA", "false").lower() == "true"
+    simulation_mode = os.getenv("SIMULATION_MODE", "true").lower() == "true"
+
     # 거래 날짜
     trading_date = os.getenv("TRADING_DATE")
     if not trading_date:
@@ -223,6 +231,17 @@ def main():
                 print("⚠️ Weekend - No trading")
                 return
             trading_date = now.strftime("%Y-%m-%d")
+    else:
+        # Alpaca 모드에서 과거 날짜 입력 시 경고 및 무시
+        if use_alpaca and not simulation_mode:
+            today = datetime.now().strftime("%Y-%m-%d")
+            if trading_date != today:
+                print(f"\n⚠️  WARNING: Alpaca mode cannot use past dates for news")
+                print(f"   Requested date: {trading_date}")
+                print(f"   Current date: {today}")
+                print(f"   → Ignoring past date and using today's date")
+                print(f"   → For backtesting, use SIMULATION_MODE=true\n")
+                trading_date = today
 
     print(f"📅 Trading Date: {trading_date}")
 

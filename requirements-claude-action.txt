@@ -1,0 +1,19 @@
+# Claude Code Action 버전 Dependencies
+# API 키 불필요 - GitHub Actions의 claude-code-action 사용
+
+# Stock Data
+yfinance>=0.2.36
+
+# Market News Collection (Jina AI)
+requests>=2.31.0
+
+# Trading API (Alpaca Markets) - Updated to alpaca-py
+alpaca-py>=0.33.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Optional: For enhanced data collection
+pandas>=2.0.0
+
+# Note: anthropic 패키지 불필요 (claude-code-action 사용)

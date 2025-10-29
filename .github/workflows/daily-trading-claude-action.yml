@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install yfinance python-dotenv requests
+          pip install -r requirements-claude-action.txt
 
       - name: Fetch latest stock data
         env:
@@ -42,34 +42,62 @@ jobs:
         env:
           JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
           TRADING_DATE: ${{ inputs.trading_date }}
+          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
+          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
         run: |
           python fetch_market_news.py
 
       - name: Prepare trading data
         env:
           TRADING_DATE: ${{ inputs.trading_date }}
+          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
+          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
         run: |
           python prepare_trading_data.py
 
       - name: Run Claude Code Action for trading decision
         uses: anthropics/claude-code-action@v1
         with:
-          # trading_prompt.txt에 작성된 프롬프트 사용
-          prompt-file: 'trading_prompt.txt'
-          # trading_data.json 데이터 파일 포함
-          context-files: |
-            trading_data.json
-          # Claude의 응답을 claude_decision.json으로 저장
-          output-file: 'claude_decision.json'
-          # 사용할 모델
-          model: 'claude-3-5-sonnet-20241022'
-          # 최대 토큰
-          max-tokens: 2048
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are an expert AI trader. Please perform the following task:
+
+            1. Read the file 'trading_prompt.txt' which contains detailed trading instructions
+            2. Read the file 'trading_data.json' which contains:
+               - Current portfolio positions and cash
+               - Market prices for all NASDAQ 100 stocks
+               - Market news (general market, sector-specific, and individual stock news)
+            3. Analyze the market data and news to make informed trading decisions
+            4. Write your trading decision to 'claude_decision.json' in the following JSON format:
+               {
+                 "analysis": "Your detailed market and news analysis with specific references",
+                 "actions": [
+                   {"action": "buy", "symbol": "AAPL", "amount": 10, "reason": "specific reasoning"},
+                   {"action": "sell", "symbol": "MSFT", "amount": 5, "reason": "specific reasoning"}
+                 ]
+               }
+            5. If no trades are needed, use: {"analysis": "reasoning for holding", "actions": []}
+
+            IMPORTANT: Base your decisions on the news content and fundamental analysis provided in the data files.
+
+            Please complete this task now.
+          claude_args: |
+            --model claude-sonnet-4-5-20250929
+            --max-turns 10
+          track_progress: true
 
       - name: Execute trades
         env:
           DECISION_FILE: claude_decision.json
           TRADING_DATA_FILE: trading_data.json
+          # Trading mode configuration
+          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
+          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
+          CONFIRM_REAL_TRADING: ${{ vars.CONFIRM_REAL_TRADING || 'false' }}
+          # Alpaca API credentials (only used if USE_ALPACA=true)
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
+          ALPACA_PAPER: ${{ vars.ALPACA_PAPER || 'true' }}
         run: |
           python execute_trades.py
 

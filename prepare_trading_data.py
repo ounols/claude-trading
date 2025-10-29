@@ -8,6 +8,10 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
+from dotenv import load_dotenv
+
+# .env 파일 로드
+load_dotenv()
 
 
 class TradingDataPreparer:
@@ -222,6 +226,10 @@ class TradingDataPreparer:
 
 def main():
     """메인 실행 함수"""
+    # 거래 모드 확인
+    use_alpaca = os.getenv("USE_ALPACA", "false").lower() == "true"
+    simulation_mode = os.getenv("SIMULATION_MODE", "true").lower() == "true"
+
     # 거래 날짜 및 시간
     trading_datetime = os.getenv("TRADING_DATETIME")
 
@@ -229,6 +237,17 @@ def main():
         # 환경변수에서 날짜만 있는 경우
         trading_date = os.getenv("TRADING_DATE")
         if trading_date:
+            # Alpaca 모드에서 과거 날짜 입력 시 경고 및 무시
+            if use_alpaca and not simulation_mode:
+                today = datetime.now().strftime("%Y-%m-%d")
+                if trading_date != today:
+                    print(f"\n⚠️  WARNING: Alpaca mode cannot use past dates")
+                    print(f"   Requested date: {trading_date}")
+                    print(f"   Current date: {today}")
+                    print(f"   → Ignoring past date and using today's date")
+                    print(f"   → For backtesting, use SIMULATION_MODE=true\n")
+                    trading_date = today
+
             # 날짜만 있으면 현재 시간 추가
             now = datetime.now()
             trading_datetime = f"{trading_date}T{now.strftime('%H:%M:%S')}"
