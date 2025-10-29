@@ -17,6 +17,12 @@ except ImportError:
     print("⚠️ yfinance not installed. Install with: pip install yfinance")
     YFINANCE_AVAILABLE = False
 
+try:
+    from alpaca_trader import AlpacaTrader
+    ALPACA_AVAILABLE = True
+except ImportError:
+    ALPACA_AVAILABLE = False
+
 
 NASDAQ_100_SYMBOLS = [
     "NVDA", "MSFT", "AAPL", "GOOG", "GOOGL", "AMZN", "META", "AVGO", "TSLA",
@@ -165,9 +171,100 @@ def get_latest_trading_date() -> str:
     return now.strftime("%Y-%m-%d")
 
 
+def update_alpaca_portfolio(data_dir: Path, signature: str = "claude-trader") -> bool:
+    """
+    Alpaca API를 통해 현재 포트폴리오 정보를 가져와서 position.jsonl 업데이트
+
+    Args:
+        data_dir: 데이터 디렉토리 경로
+        signature: 에이전트 시그니처 (기본값: claude-trader)
+
+    Returns:
+        성공 여부
+    """
+    if not ALPACA_AVAILABLE:
+        print("⚠️ alpaca-py not available. Portfolio sync skipped.")
+        return False
+
+    try:
+        # Alpaca 클라이언트 초기화
+        alpaca_paper = os.getenv("ALPACA_PAPER", "true").lower() == "true"
+        trader = AlpacaTrader(paper=alpaca_paper)
+
+        print(f"\n📊 Syncing portfolio from Alpaca ({'Paper' if alpaca_paper else 'Live'})...")
+
+        # 현재 포지션 가져오기
+        positions = trader.get_positions()
+
+        # position.jsonl 파일 경로
+        position_dir = data_dir / "agent_data" / signature / "position"
+        position_file = position_dir / "position.jsonl"
+
+        # 디렉토리 생성
+        position_dir.mkdir(parents=True, exist_ok=True)
+
+        # 기존 포지션 읽기 (ID 추적용)
+        last_id = -1
+        if position_file.exists():
+            with open(position_file, "r") as f:
+                for line in f:
+                    if not line.strip():
+                        continue
+                    doc = json.loads(line)
+                    last_id = max(last_id, doc.get("id", -1))
+
+        # NASDAQ 100 심볼로 포지션 구조 생성
+        position_data = {symbol: 0 for symbol in NASDAQ_100_SYMBOLS}
+
+        # Alpaca 포지션으로 업데이트
+        for symbol, qty in positions.items():
+            if symbol in position_data:
+                position_data[symbol] = qty
+            elif symbol == 'CASH':
+                position_data['CASH'] = qty
+
+        # CASH가 없으면 계좌 정보에서 가져오기
+        if 'CASH' not in positions:
+            account_info = trader.get_account_info()
+            position_data['CASH'] = account_info.get('cash', 0.0)
+
+        # 현재 시간
+        now = datetime.now()
+        current_datetime = now.strftime("%Y-%m-%dT%H:%M:%S")
+        current_date = now.strftime("%Y-%m-%d")
+
+        # 새 포지션 추가
+        new_position = {
+            "datetime": current_datetime,
+            "date": current_date,
+            "id": last_id + 1,
+            "positions": position_data
+        }
+
+        # 파일에 추가
+        with open(position_file, "a") as f:
+            f.write(json.dumps(new_position) + "\n")
+
+        # 포지션 요약 출력
+        holdings_count = sum(1 for symbol, qty in position_data.items()
+                           if symbol != 'CASH' and qty > 0)
+
+        print(f"✅ Portfolio synced from Alpaca:")
+        print(f"   - Cash: ${position_data.get('CASH', 0):.2f}")
+        print(f"   - Holdings: {holdings_count} positions")
+        print(f"   - Saved to: {position_file}")
+
+        return True
+
+    except Exception as e:
+        print(f"⚠️ Failed to sync portfolio from Alpaca: {e}")
+        return False
+
+
 def main():
     """메인 실행 함수"""
-    # 환경 변수에서 날짜 범위 가져오기
+    # 환경 변수에서 설정 가져오기
+    use_alpaca = os.getenv("USE_ALPACA", "false").lower() == "true"
     end_date = os.getenv("END_DATE", get_latest_trading_date())
     days_back = int(os.getenv("DAYS_BACK", "30"))
 
@@ -182,7 +279,13 @@ def main():
     print("=" * 60)
     print(f"📅 Date range: {start_date} to {end_date}")
     print(f"📊 Symbols: {len(NASDAQ_100_SYMBOLS)} stocks")
+    if use_alpaca:
+        print(f"🔗 Alpaca sync: Enabled")
     print("=" * 60)
+
+    # Alpaca 포트폴리오 동기화 (USE_ALPACA=true인 경우)
+    if use_alpaca:
+        update_alpaca_portfolio(data_dir)
 
     if not YFINANCE_AVAILABLE:
         print("\n❌ yfinance is not installed!")

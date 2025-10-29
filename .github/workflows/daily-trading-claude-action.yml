@@ -42,16 +42,16 @@ jobs:
         env:
           JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
           TRADING_DATE: ${{ inputs.trading_date }}
-          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
-          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
+          USE_ALPACA: 'true'
+          SIMULATION_MODE: 'false'
         run: |
           python fetch_market_news.py
 
       - name: Prepare trading data
         env:
           TRADING_DATE: ${{ inputs.trading_date }}
-          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
-          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
+          USE_ALPACA: 'true'
+          SIMULATION_MODE: 'false'
         run: |
           python prepare_trading_data.py
 
@@ -91,13 +91,13 @@ jobs:
           DECISION_FILE: claude_decision.json
           TRADING_DATA_FILE: trading_data.json
           # Trading mode configuration
-          SIMULATION_MODE: ${{ vars.SIMULATION_MODE || 'true' }}
-          USE_ALPACA: ${{ vars.USE_ALPACA || 'false' }}
-          CONFIRM_REAL_TRADING: ${{ vars.CONFIRM_REAL_TRADING || 'false' }}
+          SIMULATION_MODE: 'false'
+          USE_ALPACA: 'true'
+          CONFIRM_REAL_TRADING: 'true'
           # Alpaca API credentials (only used if USE_ALPACA=true)
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_API_SECRET: ${{ secrets.ALPACA_API_SECRET }}
-          ALPACA_PAPER: ${{ vars.ALPACA_PAPER || 'true' }}
+          ALPACA_PAPER: 'true'
         run: |
           python execute_trades.py
 
