@@ -118,7 +118,10 @@ jobs:
           python execute_trades.py
 
       - name: Commit and push results
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git remote set-url --push origin https://${GITHUB_TOKEN}@github.com/ounols/claude-trading.git
           git add data/
           # 변경사항이 있을 때만 커밋
           if git diff --staged --quiet; then
