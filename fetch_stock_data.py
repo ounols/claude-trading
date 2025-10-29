@@ -5,10 +5,15 @@
 
 import json
 import os
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 import time
+
+# Windows 환경에서 UTF-8 출력 설정
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 try:
     import yfinance as yf

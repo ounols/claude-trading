@@ -4,11 +4,26 @@ Claude Code Action에 전달할 데이터를 JSON으로 준비
 """
 
 import os
+import sys
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional
 from dotenv import load_dotenv
+
+# Alpaca imports
+try:
+    from alpaca.trading.client import TradingClient
+    from alpaca.trading.requests import GetAssetsRequest
+    from alpaca.trading.enums import AssetClass
+    ALPACA_AVAILABLE = True
+except ImportError:
+    print("⚠️ alpaca-py not installed. Install with: pip install alpaca-py")
+    ALPACA_AVAILABLE = False
+
+# Windows 환경에서 UTF-8 출력 설정
+if sys.platform == 'win32':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 # .env 파일 로드
 load_dotenv()
@@ -17,11 +32,28 @@ load_dotenv()
 class TradingDataPreparer:
     """트레이딩 데이터 준비 클래스"""
 
-    def __init__(self, data_path: str = "./data", signature: str = "claude-trader"):
+    def __init__(self, data_path: str = "./data", signature: str = "claude-trader", use_alpaca: bool = False):
         self.data_path = Path(data_path)
         self.signature = signature
         self.position_dir = self.data_path / "agent_data" / signature / "position"
         self.position_file = self.position_dir / "position.jsonl"
+        self.use_alpaca = use_alpaca
+
+        # Alpaca 클라이언트 초기화
+        self.alpaca_client = None
+        if use_alpaca and ALPACA_AVAILABLE:
+            api_key = os.getenv("ALPACA_API_KEY")
+            api_secret = os.getenv("ALPACA_API_SECRET")
+            paper = os.getenv("ALPACA_PAPER", "true").lower() == "true"
+
+            if api_key and api_secret:
+                try:
+                    self.alpaca_client = TradingClient(api_key, api_secret, paper=paper)
+                    print(f"✅ Alpaca client initialized ({'Paper' if paper else 'Live'} trading)")
+                except Exception as e:
+                    print(f"⚠️ Failed to initialize Alpaca client: {e}")
+            else:
+                print("⚠️ Alpaca API credentials not found in environment")
 
         # NASDAQ 100 심볼
         self.symbols = [
@@ -62,8 +94,50 @@ class TradingDataPreparer:
 
         print(f"✅ Initialized position with ${initial_cash} at {init_datetime}")
 
+    def get_alpaca_portfolio(self) -> Optional[Dict[str, float]]:
+        """Alpaca에서 실제 포트폴리오 가져오기"""
+        if not self.alpaca_client:
+            return None
+
+        try:
+            # 계좌 정보 가져오기
+            account = self.alpaca_client.get_account()
+
+            # 포지션 가져오기
+            positions = self.alpaca_client.get_all_positions()
+
+            # 포트폴리오 딕셔너리 생성
+            portfolio = {symbol: 0.0 for symbol in self.symbols}
+            portfolio['CASH'] = float(account.cash)
+
+            # Alpaca 포지션을 portfolio에 반영
+            for position in positions:
+                symbol = position.symbol
+                if symbol in portfolio:
+                    portfolio[symbol] = float(position.qty)
+
+            print(f"📊 Alpaca Portfolio loaded:")
+            print(f"   - Cash: ${portfolio['CASH']:.2f}")
+            print(f"   - Buying Power: ${float(account.buying_power):.2f}")
+            print(f"   - Portfolio Value: ${float(account.portfolio_value):.2f}")
+            print(f"   - Positions: {len([p for p in positions if p.qty != '0'])} stocks")
+
+            return portfolio
+
+        except Exception as e:
+            print(f"⚠️ Error fetching Alpaca portfolio: {e}")
+            return None
+
     def get_latest_position(self) -> tuple[Dict[str, float], int, str, str]:
         """최신 포지션 조회 (datetime 기준으로 정렬)"""
+        # Alpaca 모드인 경우 실제 포트폴리오 가져오기
+        if self.use_alpaca and self.alpaca_client:
+            portfolio = self.get_alpaca_portfolio()
+            if portfolio:
+                # Alpaca 포트폴리오를 반환 (ID는 -1, 날짜는 None)
+                return portfolio, -1, None, None
+
+        # 로컬 파일에서 포지션 조회
         if not self.position_file.exists():
             return {}, -1, None, None
 
@@ -145,6 +219,24 @@ class TradingDataPreparer:
             print(f"⚠️ Error loading market news: {e}")
             return None
 
+    def get_latest_trading_date(self) -> Optional[str]:
+        """데이터에서 가장 최근 거래일 찾기"""
+        merged_file = self.data_path / "merged.jsonl"
+        if not merged_file.exists():
+            return None
+
+        latest_date = None
+        with open(merged_file, "r") as f:
+            first_line = f.readline()
+            if first_line.strip():
+                doc = json.loads(first_line)
+                series = doc.get("Time Series (Daily)", {})
+                if series:
+                    dates = sorted(series.keys(), reverse=True)
+                    latest_date = dates[0] if dates else None
+
+        return latest_date
+
     def prepare_data(self, trading_datetime: str) -> Dict:
         """Claude Code Action에 전달할 데이터 준비"""
         # datetime에서 date 추출
@@ -152,19 +244,36 @@ class TradingDataPreparer:
 
         print(f"📊 Preparing trading data for {trading_datetime}...")
 
-        # 포지션 초기화 (없는 경우)
+        # 포지션 조회
         current_position, current_id, _, _ = self.get_latest_position()
+
+        # 포지션이 없고, Alpaca 모드가 아닌 경우에만 초기화
         if not current_position:
-            print("📝 Initializing new position...")
-            self.initialize_position(trading_datetime)
-            current_position, current_id, _, _ = self.get_latest_position()
+            if self.use_alpaca:
+                print("❌ No Alpaca portfolio found - please check API credentials")
+                return None
+            else:
+                print("📝 Initializing new position...")
+                self.initialize_position(trading_datetime)
+                current_position, current_id, _, _ = self.get_latest_position()
 
         # 주가 데이터 로드 (날짜 기준)
         prices = self.get_all_prices(date)
 
         if not prices:
             print(f"⚠️ No price data for {date}")
-            return None
+            # 가장 최근 거래일 찾기
+            latest_date = self.get_latest_trading_date()
+            if latest_date:
+                print(f"🔄 Using latest available trading date: {latest_date}")
+                date = latest_date
+                prices = self.get_all_prices(date)
+                if not prices:
+                    print(f"❌ Still no price data available")
+                    return None
+            else:
+                print(f"❌ No trading data available in merged.jsonl")
+                return None
 
         # 포트폴리오 가치 계산
         total_value = current_position.get("CASH", 0)
@@ -261,8 +370,15 @@ def main():
 
     print(f"📅 Trading DateTime: {trading_datetime}")
 
-    # 데이터 준비
-    preparer = TradingDataPreparer()
+    # 거래 모드 출력
+    if use_alpaca:
+        mode = "Paper Trading" if os.getenv("ALPACA_PAPER", "true").lower() == "true" else "Live Trading"
+        print(f"💼 Mode: Alpaca {mode}")
+    else:
+        print(f"💼 Mode: Local Simulation")
+
+    # 데이터 준비 (Alpaca 사용 여부 전달)
+    preparer = TradingDataPreparer(use_alpaca=use_alpaca)
     trading_data = preparer.prepare_data(trading_datetime)
 
     if not trading_data:

@@ -29,11 +29,13 @@ env/
 # Environment Variables
 .env
 .env.local
+.env.test
 runtime_env.json
 
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -46,10 +48,18 @@ Thumbs.db
 *.log
 logs/
 
-# Data (주의: 필요시 주석 해제)
-# data/agent_data/*/log/
-# data/agent_data/*/position/
+# Trading Data (워크플로우 생성 파일들)
+# 매 실행마다 생성되므로 git에 포함하지 않음
+data/daily_*.json
+data/merged.jsonl
+market_news.json
+trading_data.json
+trading_prompt.txt
+claude_decision.json
 
 # Temporary files
 *.tmp
 *.bak
+
+# Test files
+test_*.py
