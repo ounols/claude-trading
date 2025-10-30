@@ -422,18 +422,26 @@ Please carefully review the news data in trading_data.json before making decisio
 
     now_et = now_utc + et_offset
 
-    # 세션 판단
+    # 세션 판단 (cron 실행 시간 고려하여 넓은 범위)
     et_hour = now_et.hour
     et_minute = now_et.minute
     current_session = ""
-    if (et_hour == 9 and et_minute >= 30) or (et_hour >= 10 and et_hour < 12):
-        current_session = "Market Open Session (9:45 AM ET)"
+
+    # 각 cron 실행 시간대를 기준으로 ±2시간 여유 설정
+    if et_hour >= 9 and et_hour < 12:
+        # 9:45 AM 실행 목표 (9:00 AM ~ 11:59 AM)
+        current_session = "Market Open Session (Target: 9:45 AM ET)"
     elif et_hour >= 12 and et_hour < 15:
-        current_session = "Mid-Day Session (12:30 PM ET)"
-    elif et_hour >= 15 and et_hour < 16:
-        current_session = "Market Close Session (3:30 PM ET)"
+        # 12:30 PM 실행 목표 (12:00 PM ~ 2:59 PM)
+        current_session = "Mid-Day Session (Target: 12:30 PM ET)"
+    elif et_hour >= 15 and et_hour <= 16:
+        # 3:30 PM 실행 목표 (3:00 PM ~ 4:00 PM, 장 마감 4:00 PM)
+        current_session = "Market Close Session (Target: 3:30 PM ET)"
+    elif et_hour >= 6 and et_hour < 9:
+        # 프리마켓 시간대
+        current_session = "Pre-Market Hours (Market opens at 9:30 AM ET)"
     else:
-        current_session = "Outside regular trading hours"
+        current_session = "After-Hours / Outside regular trading hours"
 
     time_context = f"""
 **Current Time**:
