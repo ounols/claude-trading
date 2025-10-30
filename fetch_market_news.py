@@ -207,11 +207,16 @@ class MarketNewsCollector:
                 if publish_time != 'unknown' and publish_time > cutoff_date:
                     continue
 
+                # description과 content 길이 제한 (500자)
+                desc_text = description.text if description is not None else ''
+                if len(desc_text) > 500:
+                    desc_text = desc_text[:500] + '...'
+
                 news_items.append({
                     'url': link.text if link is not None else '',
                     'title': title.text if title is not None else 'No title',
-                    'description': description.text if description is not None else '',
-                    'content': description.text if description is not None else '',
+                    'description': desc_text,
+                    'content': desc_text,
                     'publish_time': publish_time,
                     'source': 'CNBC Stock News'
                 })
@@ -272,11 +277,16 @@ class MarketNewsCollector:
                 if publish_time != 'unknown' and publish_time > cutoff_date:
                     continue
 
+                # description과 content 길이 제한 (500자)
+                desc_text = description.text if description is not None else ''
+                if len(desc_text) > 500:
+                    desc_text = desc_text[:500] + '...'
+
                 news_items.append({
                     'url': link.text if link is not None else '',
                     'title': title.text if title is not None else 'No title',
-                    'description': description.text if description is not None else '',
-                    'content': description.text if description is not None else '',
+                    'description': desc_text,
+                    'content': desc_text,
                     'publish_time': publish_time,
                     'source': f'NASDAQ - {symbol}'
                 })
@@ -331,11 +341,16 @@ class MarketNewsCollector:
                 if publish_time != 'unknown' and publish_time > cutoff_date:
                     continue
 
+                # description과 content 길이 제한 (500자)
+                desc_text = description.text if description is not None else ''
+                if len(desc_text) > 500:
+                    desc_text = desc_text[:500] + '...'
+
                 news_items.append({
                     'url': link.text if link is not None else '',
                     'title': title.text if title is not None else 'No title',
-                    'description': description.text if description is not None else '',
-                    'content': description.text if description is not None else '',
+                    'description': desc_text,
+                    'content': desc_text,
                     'publish_time': publish_time,
                     'source': 'Kagi Business News'
                 })

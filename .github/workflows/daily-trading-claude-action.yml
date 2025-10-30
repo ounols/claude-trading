@@ -87,6 +87,10 @@ jobs:
                - Current portfolio positions and cash
                - Market prices for all NASDAQ 100 stocks
                - Market news (general market, sector-specific, and individual stock news)
+               - NOTE: If the file is too large (>25000 tokens), use Bash tools to extract sections:
+                 * Use `jq` to extract specific JSON paths
+                 * Use `grep` with context lines (-A, -B) to find relevant sections
+                 * Focus on portfolio, prices, and news summaries first
             3. (Optional) Review previous trading logs in 'data/agent_data/claude-trader/log/' folder to:
                - Understand your past trading decisions and their outcomes
                - Maintain consistency in your trading strategy
@@ -145,7 +149,7 @@ jobs:
           claude_args: |
             --model claude-sonnet-4-5-20250929
             --max-turns 10
-            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "Bash(echo:*)" --allowed-tools "Bash(date:*)" --allowed-tools "WebFetch" --allowed-tools "Write" --allowed-tools "Read"
+            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "Bash(echo:*)" --allowed-tools "Bash(date:*)" --allowed-tools "Bash(grep:*)" --allowed-tools "Bash(head:*)" --allowed-tools "Bash(tail:*)" --allowed-tools "Bash(cat:*)" --allowed-tools "Bash(jq:*)" --allowed-tools "WebFetch" --allowed-tools "Write" --allowed-tools "Read" --allowed-tools "Grep"
 
 
       - name: Execute trades
