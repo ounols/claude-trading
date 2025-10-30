@@ -75,6 +75,8 @@ jobs:
 
       - name: Run Claude Code Action for trading decision
         uses: anthropics/claude-code-action@v1
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -103,6 +105,36 @@ jobs:
                  ]
                }
             7. If no trades are needed, use: {"analysis": "reasoning for holding", "actions": []}
+            8. After completing your trading decision, send a summary to Discord:
+               - Read the environment variable DISCORD_WEBHOOK for the webhook URL
+               - Create a Korean summary of your trading decision including:
+                 * 📊 시장 분석 요약 (key points from your analysis)
+                 * 💼 거래 결정 (list of buy/sell actions with reasons)
+                 * 📈 포트폴리오 현황 (current portfolio state if available)
+               - Use curl or Bash to send a POST request to the Discord webhook:
+                 ```bash
+                 curl -X POST "$DISCORD_WEBHOOK" \
+                   -H "Content-Type: application/json" \
+                   -d '{
+                     "embeds": [{
+                       "title": "🤖 AI 트레이딩 결과",
+                       "description": "Your Korean summary here",
+                       "color": 5814783,
+                       "timestamp": "current ISO timestamp"
+                     }]
+                   }'
+                 ```
+               - IMPORTANT - Writing Style Guidelines:
+                 * Use military-style formal Korean tone (격식체, 군대 말투)
+                 * Add sound effects based on sentiment:
+                   - Positive news/results: "기합!" (energetic affirmation)
+                   - Negative news/results: "기열!" (concerned warning)
+                   - Other sound effects to use naturally: "쌔애끼", "뽀르삐뽑...", "뽀뽀르삡...", "삡!", "악!"
+                 * Use humorous, DC-inside (디시인사이드) style internet slang and meme culture
+                 * Keep the tone light and entertaining while maintaining factual accuracy
+                 * CRITICAL: Never distort or exaggerate facts - humor should come from style, not misinformation
+                 * Example tone: "시장 분석 결과 보고드립니다! 기합! 오늘 테크 섹터가 뽀르삐뽑... 상승세를 보였습니다!"
+               - If DISCORD_WEBHOOK is empty or not set, skip this step silently
 
             IMPORTANT: Base your decisions on the news content and fundamental analysis provided in the data files.
 
@@ -110,7 +142,7 @@ jobs:
           claude_args: |
             --model claude-sonnet-4-5-20250929
             --max-turns 10
-            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "WebFetch" --allowed-tools "Write"
+            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "WebFetch" --allowed-tools "Write"
 
 
       - name: Execute trades
