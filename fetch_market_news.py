@@ -469,9 +469,9 @@ class MarketNewsCollector:
         else:
             print("\n⏭️  Skipping market/sector news (no JINA API key)")
 
-        # 4. 주요 종목 뉴스 (시가총액 상위 20개만) - yfinance + NASDAQ RSS 사용
+        # 4. 주요 종목 뉴스 - yfinance + NASDAQ RSS 사용
         print("\n4️⃣ Collecting top stocks news (using yfinance + NASDAQ RSS)...")
-        top_symbols = symbols[:20]  # 상위 20개만
+        top_symbols = symbols[:13]  # 상위 13개만
 
         for symbol in top_symbols:
             print(f"  Fetching news for {symbol}...")
