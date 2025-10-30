@@ -125,7 +125,6 @@ jobs:
                }
             7. If no trades are needed (which is often the case in long-term investing), use: {"analysis": "reasoning for holding", "actions": []}
             8. After completing your trading decision, send a summary to Discord:
-               - The Discord webhook URL is `${{ secrets.DISCORD_WEBHOOK }}`
                - Create a Korean summary of your trading decision including:
                  * 📊 시장 분석 요약 (key points from your analysis)
                  * 💼 거래 결정 (list of buy/sell actions with reasons)
@@ -140,27 +139,12 @@ jobs:
                  * Keep the tone light and entertaining while maintaining factual accuracy
                  * CRITICAL: Never distort or exaggerate facts - humor should come from style, not misinformation
                  * Example tone: "삡! 시장 분석 결과 보고드립니다! 오늘 테크 섹터가 뽀르삐뽑... 상승세를 보였습니다! 기합!"
-               - IMPORTANT: Use the Write tool to create the Discord message file:
-                 Step 1: Use Write tool to create 'discord_message.json' with this structure:
-                 ```json
-                 {
-                   "embeds": [{
-                     "title": "🤖 AI 트레이딩 결과",
-                     "description": "Your Korean summary here with \\n for newlines",
-                     "color": 5814783,
-                     "footer": {
-                       "text": "🤖 Generated with Claude Code | Co-Authored-By: Claude"
-                     },
-                     "timestamp": "ISO8601 timestamp"
-                   }]
-                 }
-                 ```
-                 Step 2: Then use this Bash command to send it:
+               - Send the message using this simple command (message should be under 2000 characters):
                  ```bash
-                 curl -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" -d @discord_message.json
+                 curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" -H "Content-Type: application/json" -d '{"embeds":[{"title":"🤖 AI 트레이딩 결과","description":"Your Korean summary with \\n for newlines","color":5814783,"footer":{"text":"🤖 Generated with Claude Code"}}]}'
                  ```
-               - Use \n for line breaks in the description field
-               - Keep the message concise but informative (under 2000 characters)
+               - Replace "Your Korean summary with \\n for newlines" with your actual message
+               - Make sure to escape special characters properly in the JSON
 
             **CRITICAL REMINDERS**:
             - Base decisions on thorough fundamental analysis and news research
@@ -172,8 +156,8 @@ jobs:
             Please complete this task now.
           claude_args: |
             --model claude-sonnet-4-5-20250929
-            --max-turns 10
-            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "Bash(echo:*)" --allowed-tools "Bash(date:*)" --allowed-tools "Bash(grep:*)" --allowed-tools "Bash(head:*)" --allowed-tools "Bash(tail:*)" --allowed-tools "Bash(cat:*)" --allowed-tools "Bash(jq:*)" --allowed-tools "Bash(test:*)" --allowed-tools "Bash([)" --allowed-tools "Bash(tr:*)" --allowed-tools "WebFetch" --allowed-tools "Write" --allowed-tools "Read" --allowed-tools "Grep"
+            --max-turns 30
+            --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "Bash(echo:*)" --allowed-tools "Bash(date:*)" --allowed-tools "Bash(grep:*)" --allowed-tools "Bash(head:*)" --allowed-tools "Bash(tail:*)" --allowed-tools "Bash(cat:*)" --allowed-tools "Bash(jq:*)" --allowed-tools "WebFetch" --allowed-tools "Write" --allowed-tools "Read" --allowed-tools "Grep"
 
 
       - name: Execute trades
