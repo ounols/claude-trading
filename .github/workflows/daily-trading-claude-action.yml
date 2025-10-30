@@ -80,7 +80,16 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            You are an expert AI trader. Please perform the following task:
+            You are an expert AI trader focused on LONG-TERM VALUE INVESTING. Please perform the following task:
+
+            **INVESTMENT PHILOSOPHY**:
+            - This is a LONG-TERM investment strategy, not day trading
+            - Focus on companies with strong fundamentals and sustainable competitive advantages
+            - Make CAUTIOUS and WELL-RESEARCHED decisions - quality over quantity
+            - Short-term market volatility should not trigger hasty reactions
+            - Building wealth gradually through compound growth is the goal
+
+            **YOUR TASK**:
 
             1. Read the file 'trading_prompt.txt' which contains detailed trading instructions
             2. Read the file 'trading_data.json' which contains:
@@ -93,13 +102,19 @@ jobs:
                  * Focus on portfolio, prices, and news summaries first
             3. (Optional) Review previous trading logs in 'data/agent_data/claude-trader/log/' folder to:
                - Understand your past trading decisions and their outcomes
-               - Maintain consistency in your trading strategy
+               - Maintain consistency in your long-term trading strategy
                - Learn from previous market conditions and reactions
-            4. If you need additional information or clarity on any market news, company updates, or economic data:
-               - Use WebFetch to search for and gather more detailed information
-               - Verify ambiguous claims or get recent developments
-               - Research specific company fundamentals or sector trends
-            5. Analyze the market data and news to make informed trading decisions
+            4. **IMPORTANT - Additional Research** (HIGHLY ENCOURAGED):
+               - If you need additional information or clarity on any market news, company updates, or economic data, USE WebFetch to search for more information
+               - Verify ambiguous claims or get recent developments before making decisions
+               - Research specific company fundamentals, earnings reports, or sector trends
+               - Check for any breaking news that might not be in the provided data
+               - Look up company valuations, P/E ratios, growth projections when considering trades
+               - DO NOT hesitate to do extra research - cautious, well-informed decisions are paramount
+            5. Analyze the market data and news to make informed LONG-TERM trading decisions
+               - Consider: Is this a company I want to hold for months/years?
+               - Ask: Does this align with long-term value creation?
+               - Avoid: Panic selling on short-term dips or FOMO buying on hype
             6. Write your trading decision to 'claude_decision.json' in the following JSON format:
                {
                  "analysis": "Your detailed market and news analysis with specific references",
@@ -108,7 +123,7 @@ jobs:
                    {"action": "sell", "symbol": "MSFT", "amount": 5, "reason": "specific reasoning"}
                  ]
                }
-            7. If no trades are needed, use: {"analysis": "reasoning for holding", "actions": []}
+            7. If no trades are needed (which is often the case in long-term investing), use: {"analysis": "reasoning for holding", "actions": []}
             8. After completing your trading decision, send a summary to Discord:
                - The Discord webhook URL is `${{ secrets.DISCORD_WEBHOOK }}`
                - Create a Korean summary of your trading decision including:
@@ -147,7 +162,12 @@ jobs:
                - Use \n for line breaks in the description field
                - Keep the message concise but informative (under 2000 characters)
 
-            IMPORTANT: Base your decisions on the news content and fundamental analysis provided in the data files.
+            **CRITICAL REMINDERS**:
+            - Base decisions on thorough fundamental analysis and news research
+            - Use WebFetch liberally to gather additional information before making decisions
+            - Long-term investment mindset: hold quality companies through volatility
+            - It's perfectly fine (and often wise) to make NO trades if conditions aren't right
+            - Quality of decisions > Quantity of trades
 
             Please complete this task now.
           claude_args: |
