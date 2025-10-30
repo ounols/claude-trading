@@ -125,19 +125,24 @@ jobs:
                  * Keep the tone light and entertaining while maintaining factual accuracy
                  * CRITICAL: Never distort or exaggerate facts - humor should come from style, not misinformation
                  * Example tone: "삡! 시장 분석 결과 보고드립니다! 오늘 테크 섹터가 뽀르삐뽑... 상승세를 보였습니다! 기합!"
-               - Send the message using curl with HEREDOC to avoid JSON escaping issues:
-                 ```bash
-                 curl -X POST "$DISCORD_WEBHOOK" \
-                   -H "Content-Type: application/json" \
-                   -d @- <<'EOF'
+               - IMPORTANT: Use the Write tool to create the Discord message file:
+                 Step 1: Use Write tool to create 'discord_message.json' with this structure:
+                 ```json
                  {
                    "embeds": [{
                      "title": "🤖 AI 트레이딩 결과",
-                     "description": "Your Korean summary here with proper \n for newlines",
-                     "color": 5814783
+                     "description": "Your Korean summary here with \\n for newlines",
+                     "color": 5814783,
+                     "footer": {
+                       "text": "🤖 Generated with Claude Code | Co-Authored-By: Claude"
+                     },
+                     "timestamp": "ISO8601 timestamp"
                    }]
                  }
-                 EOF
+                 ```
+                 Step 2: Then use this Bash command to send it:
+                 ```bash
+                 curl -X POST ${{ secrets.DISCORD_WEBHOOK }} -H "Content-Type: application/json" -d @discord_message.json
                  ```
                - Use \n for line breaks in the description field
                - Keep the message concise but informative (under 2000 characters)
