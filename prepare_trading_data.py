@@ -524,11 +524,6 @@ You have 3 opportunities per trading day (Mon-Fri) to analyze and make decisions
   - Portfolio positions and cash
   - Current stock prices for all NASDAQ 100 stocks (with realtime Open/High/Low/Current)
   - Market news (general, sector, and stock-specific)
-- **Historical Price Data** (30 days) for trend analysis:
-  - Individual files: `data/daily_prices_<SYMBOL>.json` (e.g., `data/daily_prices_AAPL.json`)
-  - Use Read tool to analyze specific stocks you're interested in
-  - Each file contains daily OHLCV data for the past 30 days
-  - **RECOMMENDED**: Check price trends, support/resistance levels, and volatility before trading decisions
 
 **Output Format** (MUST be valid JSON):
 {{
