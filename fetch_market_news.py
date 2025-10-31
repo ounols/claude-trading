@@ -534,8 +534,8 @@ class MarketNewsCollector:
         }
 
         # RSS 뉴스 개수: Jina 미사용 시 더 많이 수집
-        kagi_max = 5 if use_jina_search else 15
-        cnbc_max = 5 if use_jina_search else 15
+        kagi_max = 5
+        cnbc_max = 5
 
         # 1. Kagi 비즈니스 뉴스 수집 (항상 실행)
         print("\n1️⃣ Collecting Kagi business news...")
@@ -551,12 +551,12 @@ class MarketNewsCollector:
         print("\n1-3️⃣ Collecting sector news from RSS...")
 
         # Semiconductor 뉴스
-        semiconductor_max = 5 if use_jina_search else 10
+        semiconductor_max = 5
         semiconductor_news = self.fetch_semiconductor_news(max_news=semiconductor_max)
         news_data['sector_news'].extend(semiconductor_news)
 
         # Technology 섹터 뉴스
-        tech_max = 5 if use_jina_search else 10
+        tech_max = 5
         tech_news = self.fetch_kagi_tech_news(max_news=tech_max)
         news_data['sector_news'].extend(tech_news)
 

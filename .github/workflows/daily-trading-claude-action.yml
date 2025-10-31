@@ -165,7 +165,6 @@ jobs:
             Please complete this task now.
           claude_args: |
             --model claude-sonnet-4-5-20250929
-            --max-turns 30
             --allowed-tools "Bash(git:*)" --allowed-tools "Bash(mkdir:*)" --allowed-tools "Bash(curl:*)" --allowed-tools "Bash(echo:*)" --allowed-tools "Bash(date:*)" --allowed-tools "Bash(grep:*)" --allowed-tools "Bash(head:*)" --allowed-tools "Bash(tail:*)" --allowed-tools "Bash(cat:*)" --allowed-tools "Bash(jq:*)" --allowed-tools "WebFetch" --allowed-tools "Write" --allowed-tools "Read" --allowed-tools "Grep"
 
 
