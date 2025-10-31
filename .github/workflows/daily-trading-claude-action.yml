@@ -139,12 +139,21 @@ jobs:
                  * Keep the tone light and entertaining while maintaining factual accuracy
                  * CRITICAL: Never distort or exaggerate facts - humor should come from style, not misinformation
                  * Example tone: "삡! 시장 분석 결과 보고드립니다! 오늘 테크 섹터가 뽀르삐뽑... 상승세를 보였습니다! 기합!"
-               - Send the message using this simple command (message should be under 2000 characters):
-                 ```bash
-                 curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" -H "Content-Type: application/json" -d '{"embeds":[{"title":"🤖 AI 트레이딩 결과","description":"Your Korean summary with \\n for newlines","color":5814783,"footer":{"text":"🤖 Generated with Claude Code"}}]}'
-                 ```
-               - Replace "Your Korean summary with \\n for newlines" with your actual message
-               - Make sure to escape special characters properly in the JSON
+               - Send the message using Write tool to create a JSON file, then curl with the file (to avoid JSON escaping issues):
+                 1. First, use Write tool to create '/tmp/discord_message.json' with this structure (message should be under 2000 characters):
+                    {
+                      "embeds": [{
+                        "title": "🤖 AI 트레이딩 결과 (YYYY-MM-DD 장 시작/점심/마감)",
+                        "description": "Your Korean summary with \n for newlines",
+                        "color": 5814783,
+                        "footer": {
+                          "text": "🤖 Generated with Claude Code | 장기투자 = 인내"
+                        }
+                      }]
+                    }
+                 2. Then use Bash tool with this exact command:
+                    curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" -H "Content-Type: application/json" -d @/tmp/discord_message.json
+               - IMPORTANT: Using @/tmp/discord_message.json (file-based approach) prevents JSON escaping errors
 
             **CRITICAL REMINDERS**:
             - Base decisions on thorough fundamental analysis and news research
