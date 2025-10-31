@@ -184,6 +184,12 @@ class TradingDataPreparer:
                 day_data = series.get(date)
 
                 if day_data:
+                    # 실시간 데이터 여부 확인
+                    is_realtime = day_data.get("7. is_realtime", "false") == "true"
+
+                    # 현재가: 실시간 데이터면 current price 사용, 아니면 close 사용
+                    current_price = float(day_data.get("6. current price", day_data.get("4. sell price", 0)))
+
                     return {
                         "symbol": symbol,
                         "date": date,
@@ -191,18 +197,21 @@ class TradingDataPreparer:
                         "high": float(day_data.get("2. high", 0)),
                         "low": float(day_data.get("3. low", 0)),
                         "close": float(day_data.get("4. sell price", 0)),
+                        "current_price": current_price,  # 현재가 (가장 중요)
+                        "is_realtime": is_realtime,
                         "volume": int(day_data.get("5. volume", 0))
                     }
 
         return None
 
     def get_all_prices(self, date: str) -> Dict[str, float]:
-        """모든 종목의 시가 조회"""
+        """모든 종목의 현재가 조회 (실시간 데이터 우선)"""
         prices = {}
         for symbol in self.symbols:
             data = self.get_price_data(symbol, date)
             if data:
-                prices[symbol] = data["open"]
+                # 현재가 우선 사용 (실시간 데이터면 current_price, 아니면 close)
+                prices[symbol] = data["current_price"]
         return prices
 
     def load_market_news(self) -> Optional[Dict]:
@@ -285,10 +294,17 @@ class TradingDataPreparer:
                 current_price = prices.get(symbol, 0)
                 value = shares * current_price
                 total_value += value
+
+                # 상세 가격 정보 가져오기
+                price_data = self.get_price_data(symbol, date)
                 holdings.append({
                     "symbol": symbol,
                     "shares": shares,
-                    "price": current_price,
+                    "current_price": current_price,  # 현재가 (가장 중요)
+                    "open": price_data.get("open", 0) if price_data else 0,
+                    "high": price_data.get("high", 0) if price_data else 0,
+                    "low": price_data.get("low", 0) if price_data else 0,
+                    "is_realtime": price_data.get("is_realtime", False) if price_data else False,
                     "value": value
                 })
 
@@ -506,8 +522,13 @@ You have 3 opportunities per trading day (Mon-Fri) to analyze and make decisions
 **Data Available**:
 - `trading_data.json` contains:
   - Portfolio positions and cash
-  - Current stock prices for all NASDAQ 100 stocks
+  - Current stock prices for all NASDAQ 100 stocks (with realtime Open/High/Low/Current)
   - Market news (general, sector, and stock-specific)
+- **Historical Price Data** (30 days) for trend analysis:
+  - Individual files: `data/daily_prices_<SYMBOL>.json` (e.g., `data/daily_prices_AAPL.json`)
+  - Use Read tool to analyze specific stocks you're interested in
+  - Each file contains daily OHLCV data for the past 30 days
+  - **RECOMMENDED**: Check price trends, support/resistance levels, and volatility before trading decisions
 
 **Output Format** (MUST be valid JSON):
 {{

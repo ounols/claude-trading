@@ -29,8 +29,10 @@ class MarketNewsCollector:
 
     # RSS Feed URLs
     KAGI_BUSINESS_RSS_URL = "https://news.kagi.com/business.xml"
+    KAGI_TECH_RSS_URL = "https://news.kagi.com/tech.xml"
     CNBC_STOCK_NEWS_RSS_URL = "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=10000664"
     NASDAQ_STOCK_RSS_URL_TEMPLATE = "https://www.nasdaq.com/feed/rssoutbound?symbol={symbol}"
+    SEMICONDUCTOR_RSS_URL = "https://www.semiconductor-today.com/rss/news.xml"
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("JINA_API_KEY")
@@ -94,7 +96,7 @@ class MarketNewsCollector:
             print(f"⚠️ Date parsing error for '{date_str}': {e}")
             return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-    def search(self, query: str, max_results: int = 5, cutoff_date: Optional[str] = None) -> List[str]:
+    def search(self, query: str, max_results: int = 5) -> List[str]:
         """Jina Search API로 검색 수행"""
         url = f'{self.search_url}?q={query}&n={max_results}'
         headers = {
@@ -108,24 +110,20 @@ class MarketNewsCollector:
             response.raise_for_status()
             data = response.json()
 
-            filtered_urls = []
+            results = []
             for item in data.get('data', []):
                 raw_date = item.get('date', 'unknown')
                 standardized_date = self.parse_date_to_standard(raw_date)
 
-                # 날짜 필터링 (cutoff_date 이전 정보만)
-                if cutoff_date and standardized_date > cutoff_date:
-                    continue
-
-                filtered_urls.append({
+                results.append({
                     'url': item.get('url'),
                     'title': item.get('title', 'No title'),
                     'description': item.get('description', ''),
                     'date': standardized_date
                 })
 
-            print(f"  Found {len(filtered_urls)} results for '{query}'")
-            return filtered_urls
+            print(f"  Found {len(results)} results for '{query}'")
+            return results
 
         except Exception as e:
             print(f"⚠️ Search error for '{query}': {e}")
@@ -163,7 +161,7 @@ class MarketNewsCollector:
             print(f"⚠️ Reader error for '{url}': {e}")
             return None
 
-    def fetch_cnbc_stock_news(self, cutoff_date: str, max_news: int = 10) -> List[Dict]:
+    def fetch_cnbc_stock_news(self, max_news: int = 10) -> List[Dict]:
         """CNBC 주식 뉴스 RSS 피드에서 뉴스 가져오기"""
         try:
             print(f"  Fetching CNBC stock news from RSS...")
@@ -203,10 +201,6 @@ class MarketNewsCollector:
                         print(f"    ⚠️ Date parsing error: {e}")
                         publish_time = self.parse_date_to_standard(pub_date.text)
 
-                # cutoff_date 필터링
-                if publish_time != 'unknown' and publish_time > cutoff_date:
-                    continue
-
                 # description과 content 길이 제한 (500자)
                 desc_text = description.text if description is not None else ''
                 if len(desc_text) > 500:
@@ -228,7 +222,7 @@ class MarketNewsCollector:
             print(f"⚠️ CNBC RSS fetch error: {e}")
             return []
 
-    def fetch_nasdaq_stock_news(self, symbol: str, cutoff_date: str, max_news: int = 5) -> List[Dict]:
+    def fetch_nasdaq_stock_news(self, symbol: str, max_news: int = 5) -> List[Dict]:
         """NASDAQ RSS 피드에서 종목별 뉴스 가져오기"""
         rss_url = self.NASDAQ_STOCK_RSS_URL_TEMPLATE.format(symbol=symbol)
 
@@ -273,10 +267,6 @@ class MarketNewsCollector:
                         print(f"    ⚠️ Date parsing error: {e}")
                         publish_time = self.parse_date_to_standard(pub_date.text)
 
-                # cutoff_date 필터링
-                if publish_time != 'unknown' and publish_time > cutoff_date:
-                    continue
-
                 # description과 content 길이 제한 (500자)
                 desc_text = description.text if description is not None else ''
                 if len(desc_text) > 500:
@@ -297,7 +287,7 @@ class MarketNewsCollector:
             print(f"    ⚠️ NASDAQ RSS fetch error for {symbol}: {e}")
             return []
 
-    def fetch_kagi_business_news(self, cutoff_date: str, max_news: int = 10) -> List[Dict]:
+    def fetch_kagi_business_news(self, max_news: int = 10) -> List[Dict]:
         """Kagi 비즈니스 뉴스 RSS 피드에서 뉴스 가져오기"""
         try:
             print(f"  Fetching Kagi business news from RSS...")
@@ -337,10 +327,6 @@ class MarketNewsCollector:
                         print(f"    ⚠️ Date parsing error: {e}")
                         publish_time = self.parse_date_to_standard(pub_date.text)
 
-                # cutoff_date 필터링
-                if publish_time != 'unknown' and publish_time > cutoff_date:
-                    continue
-
                 # description과 content 길이 제한 (500자)
                 desc_text = description.text if description is not None else ''
                 if len(desc_text) > 500:
@@ -360,6 +346,128 @@ class MarketNewsCollector:
 
         except Exception as e:
             print(f"⚠️ Kagi RSS fetch error: {e}")
+            return []
+
+    def fetch_semiconductor_news(self, max_news: int = 10) -> List[Dict]:
+        """Semiconductor Today RSS 피드에서 반도체 뉴스 가져오기"""
+        try:
+            print(f"  Fetching semiconductor news from RSS...")
+            response = requests.get(self.SEMICONDUCTOR_RSS_URL, timeout=15)
+            response.raise_for_status()
+
+            # XML 파싱
+            root = ET.fromstring(response.content)
+            news_items = []
+
+            # RSS 2.0 형식 파싱
+            for item in root.findall('.//item')[:max_news]:
+                title = item.find('title')
+                link = item.find('link')
+                description = item.find('description')
+                pub_date = item.find('pubDate')
+
+                # 날짜 파싱 (RFC 822 형식)
+                publish_time = 'unknown'
+                if pub_date is not None and pub_date.text:
+                    try:
+                        date_str = pub_date.text
+                        # +0000 형식의 timezone을 제거하고 파싱
+                        if '+0000' in date_str or '-0000' in date_str:
+                            date_str = date_str.replace('+0000', '').replace('-0000', '').strip()
+                            dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
+                        elif ' GMT' in date_str or ' UTC' in date_str:
+                            dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z')
+                        else:
+                            # 기타 형식은 기존 parse_date_to_standard 사용
+                            publish_time = self.parse_date_to_standard(date_str)
+                            dt = None
+
+                        if dt:
+                            publish_time = dt.strftime('%Y-%m-%d %H:%M:%S')
+                    except Exception as e:
+                        print(f"    ⚠️ Date parsing error: {e}")
+                        publish_time = self.parse_date_to_standard(pub_date.text)
+
+                # description과 content 길이 제한 (500자)
+                desc_text = description.text if description is not None else ''
+                if len(desc_text) > 500:
+                    desc_text = desc_text[:500] + '...'
+
+                news_items.append({
+                    'url': link.text if link is not None else '',
+                    'title': title.text if title is not None else 'No title',
+                    'description': desc_text,
+                    'content': desc_text,
+                    'publish_time': publish_time,
+                    'source': 'Semiconductor Today'
+                })
+
+            print(f"    ✓ Found {len(news_items)} semiconductor news items")
+            return news_items
+
+        except Exception as e:
+            print(f"⚠️ Semiconductor RSS fetch error: {e}")
+            return []
+
+    def fetch_kagi_tech_news(self, max_news: int = 10) -> List[Dict]:
+        """Kagi 기술 뉴스 RSS 피드에서 뉴스 가져오기"""
+        try:
+            print(f"  Fetching Kagi tech news from RSS...")
+            response = requests.get(self.KAGI_TECH_RSS_URL, timeout=15)
+            response.raise_for_status()
+
+            # XML 파싱
+            root = ET.fromstring(response.content)
+            news_items = []
+
+            # RSS 2.0 형식 파싱
+            for item in root.findall('.//item')[:max_news]:
+                title = item.find('title')
+                link = item.find('link')
+                description = item.find('description')
+                pub_date = item.find('pubDate')
+
+                # 날짜 파싱 (RFC 822 형식: "Mon, 28 Oct 2024 12:00:00 +0000")
+                publish_time = 'unknown'
+                if pub_date is not None and pub_date.text:
+                    try:
+                        date_str = pub_date.text
+                        # +0000 형식의 timezone을 제거하고 파싱
+                        if '+0000' in date_str or '-0000' in date_str:
+                            date_str = date_str.replace('+0000', '').replace('-0000', '').strip()
+                            dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S')
+                        elif ' GMT' in date_str or ' UTC' in date_str:
+                            dt = datetime.strptime(date_str, '%a, %d %b %Y %H:%M:%S %Z')
+                        else:
+                            # 기타 형식은 기존 parse_date_to_standard 사용
+                            publish_time = self.parse_date_to_standard(date_str)
+                            dt = None
+
+                        if dt:
+                            publish_time = dt.strftime('%Y-%m-%d %H:%M:%S')
+                    except Exception as e:
+                        print(f"    ⚠️ Date parsing error: {e}")
+                        publish_time = self.parse_date_to_standard(pub_date.text)
+
+                # description과 content 길이 제한 (500자)
+                desc_text = description.text if description is not None else ''
+                if len(desc_text) > 500:
+                    desc_text = desc_text[:500] + '...'
+
+                news_items.append({
+                    'url': link.text if link is not None else '',
+                    'title': title.text if title is not None else 'No title',
+                    'description': desc_text,
+                    'content': desc_text,
+                    'publish_time': publish_time,
+                    'source': 'Kagi Tech News'
+                })
+
+            print(f"    ✓ Found {len(news_items)} tech news items")
+            return news_items
+
+        except Exception as e:
+            print(f"⚠️ Kagi Tech RSS fetch error: {e}")
             return []
 
     def get_stock_news_yfinance(self, symbol: str, max_news: int = 3) -> List[Dict]:
@@ -412,12 +520,10 @@ class MarketNewsCollector:
             print(f"⚠️ yfinance news error for '{symbol}': {e}")
             return []
 
-    def collect_market_news(self, trading_date: str, symbols: List[str]) -> Dict:
+    def collect_market_news(self, trading_date: str, symbols: List[str], use_jina_search: bool = False) -> Dict:
         """시장 뉴스 및 주요 종목 뉴스 수집"""
         print(f"\n📰 Collecting market news for {trading_date}...")
-
-        # 거래일 기준으로 cutoff (미래 정보 차단)
-        cutoff_datetime = f"{trading_date} 23:59:59"
+        print(f"   Jina Search: {'Enabled' if use_jina_search else 'Disabled (RSS only)'}")
 
         news_data = {
             'trading_date': trading_date,
@@ -427,19 +533,36 @@ class MarketNewsCollector:
             'top_stocks_news': {}
         }
 
+        # RSS 뉴스 개수: Jina 미사용 시 더 많이 수집
+        kagi_max = 5 if use_jina_search else 15
+        cnbc_max = 5 if use_jina_search else 15
+
         # 1. Kagi 비즈니스 뉴스 수집 (항상 실행)
         print("\n1️⃣ Collecting Kagi business news...")
-        kagi_news = self.fetch_kagi_business_news(cutoff_datetime, max_news=5)
+        kagi_news = self.fetch_kagi_business_news(max_news=kagi_max)
         news_data['market_overview'].extend(kagi_news)
 
         # 1-2. CNBC 주식 뉴스 수집 (항상 실행)
         print("\n1-2️⃣ Collecting CNBC stock news...")
-        cnbc_news = self.fetch_cnbc_stock_news(cutoff_datetime, max_news=5)
+        cnbc_news = self.fetch_cnbc_stock_news(max_news=cnbc_max)
         news_data['market_overview'].extend(cnbc_news)
 
-        # 2. 전체 시장 뉴스 (JINA API 사용 가능할 때만)
-        if self.has_jina_api:
-            print("\n2️⃣ Collecting general market news...")
+        # 1-3. 섹터 뉴스 수집 (RSS - 항상 실행)
+        print("\n1-3️⃣ Collecting sector news from RSS...")
+
+        # Semiconductor 뉴스
+        semiconductor_max = 5 if use_jina_search else 10
+        semiconductor_news = self.fetch_semiconductor_news(max_news=semiconductor_max)
+        news_data['sector_news'].extend(semiconductor_news)
+
+        # Technology 섹터 뉴스
+        tech_max = 5 if use_jina_search else 10
+        tech_news = self.fetch_kagi_tech_news(max_news=tech_max)
+        news_data['sector_news'].extend(tech_news)
+
+        # 2. 전체 시장 뉴스 (Jina Search 사용 시에만)
+        if use_jina_search and self.has_jina_api:
+            print("\n2️⃣ Collecting general market news via Jina Search...")
             market_queries = [
                 "NASDAQ stock market news today",
                 "US stock market outlook",
@@ -447,56 +570,57 @@ class MarketNewsCollector:
             ]
 
             for query in market_queries:
-                results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
+                results = self.search(query, max_results=2)
                 for result in results[:1]:  # 각 쿼리당 1개씩만
                     article = self.read_url(result['url'])
                     if article:
                         news_data['market_overview'].append(article)
 
             # 3. 섹터 뉴스
-            print("\n3️⃣ Collecting sector news...")
+            print("\n3️⃣ Collecting sector news via Jina Search...")
             sector_queries = [
                 "technology sector stocks",
                 "semiconductor industry news"
             ]
 
             for query in sector_queries:
-                results = self.search(query, max_results=2, cutoff_date=cutoff_datetime)
+                results = self.search(query, max_results=2)
                 for result in results[:1]:
                     article = self.read_url(result['url'])
                     if article:
                         news_data['sector_news'].append(article)
         else:
-            print("\n⏭️  Skipping market/sector news (no JINA API key)")
+            if not use_jina_search:
+                print("\n⏭️  Skipping Jina Search (disabled by USE_JINA_SEARCH=false)")
+            else:
+                print("\n⏭️  Skipping Jina Search (no JINA API key)")
 
         # 4. 주요 종목 뉴스 - yfinance + NASDAQ RSS 사용
         print("\n4️⃣ Collecting top stocks news (using yfinance + NASDAQ RSS)...")
-        top_symbols = symbols[:13]  # 상위 13개만
+
+        # 수집할 종목 개수: Jina 미사용 시 더 많이 수집
+        num_stocks = 13 if use_jina_search else 20
+        top_symbols = symbols[:num_stocks]
+
+        # 종목당 뉴스 개수: Jina 미사용 시 더 많이 수집
+        yf_max = 2 if use_jina_search else 3
+        nasdaq_max = 2 if use_jina_search else 3
 
         for symbol in top_symbols:
             print(f"  Fetching news for {symbol}...")
 
             # yfinance 뉴스
-            yf_news_items = self.get_stock_news_yfinance(symbol, max_news=2)
+            yf_news_items = self.get_stock_news_yfinance(symbol, max_news=yf_max)
 
             # NASDAQ RSS 뉴스
-            nasdaq_news_items = self.fetch_nasdaq_stock_news(symbol, cutoff_datetime, max_news=2)
+            nasdaq_news_items = self.fetch_nasdaq_stock_news(symbol, max_news=nasdaq_max)
 
             # 두 소스 합치기
             all_news_items = yf_news_items + nasdaq_news_items
 
             if all_news_items:
-                # cutoff_date 이전 뉴스만 필터링
-                filtered_news = []
-                for item in all_news_items:
-                    if item['publish_time'] <= cutoff_datetime:
-                        filtered_news.append(item)
-
-                if filtered_news:
-                    news_data['top_stocks_news'][symbol] = filtered_news
-                    print(f"    ✓ Found {len(filtered_news)} news items (yfinance: {len(yf_news_items)}, NASDAQ: {len(nasdaq_news_items)})")
-                else:
-                    print(f"    ⚠ No news within cutoff date")
+                news_data['top_stocks_news'][symbol] = all_news_items
+                print(f"    ✓ Found {len(all_news_items)} news items (yfinance: {len(yf_news_items)}, NASDAQ: {len(nasdaq_news_items)})")
             else:
                 print(f"    ⚠ No news available")
 
@@ -514,6 +638,7 @@ def main():
     # 거래 모드 확인
     use_alpaca = os.getenv("USE_ALPACA", "false").lower() == "true"
     simulation_mode = os.getenv("SIMULATION_MODE", "true").lower() == "true"
+    use_jina_search = os.getenv("USE_JINA_SEARCH", "false").lower() == "true"
 
     # 거래 날짜
     trading_date = os.getenv("TRADING_DATE")
@@ -528,16 +653,14 @@ def main():
                 return
             trading_date = now.strftime("%Y-%m-%d")
     else:
-        # Alpaca 모드에서 과거 날짜 입력 시 경고 및 무시
+        # Alpaca 모드에서 과거 날짜 입력 시 경고 (뉴스는 실시간이므로 경고만)
         if use_alpaca and not simulation_mode:
             today = datetime.now().strftime("%Y-%m-%d")
             if trading_date != today:
-                print(f"\n⚠️  WARNING: Alpaca mode cannot use past dates for news")
+                print(f"\n⚠️  WARNING: Collecting news for past date in Alpaca mode")
                 print(f"   Requested date: {trading_date}")
                 print(f"   Current date: {today}")
-                print(f"   → Ignoring past date and using today's date")
-                print(f"   → For backtesting, use SIMULATION_MODE=true\n")
-                trading_date = today
+                print(f"   Note: News collection is real-time and may not match historical data\n")
 
     print(f"📅 Trading Date: {trading_date}")
 
@@ -558,7 +681,7 @@ def main():
 
     # 뉴스 수집
     collector = MarketNewsCollector()
-    news_data = collector.collect_market_news(trading_date, symbols)
+    news_data = collector.collect_market_news(trading_date, symbols, use_jina_search=use_jina_search)
 
     # JSON 파일로 저장
     output_file = Path("market_news.json")

@@ -70,6 +70,33 @@ def fetch_stock_data_yfinance(symbol: str, start_date: str, end_date: str) -> Op
                 "5. volume": str(int(row["Volume"]))
             }
 
+        # 오늘의 실시간 데이터 추가 (장중 현재가 포함)
+        today_data = None
+        try:
+            # 오늘의 1일 데이터 가져오기 (가장 최신 정보)
+            today_df = ticker.history(period="1d", interval="1m")
+            if not today_df.empty:
+                today_open = today_df.iloc[0]['Open']
+                today_high = today_df['High'].max()
+                today_low = today_df['Low'].min()
+                today_current = today_df.iloc[-1]['Close']  # 가장 최근 가격
+                today_volume = today_df['Volume'].sum()
+
+                today_str = datetime.now().strftime("%Y-%m-%d")
+                today_data = {
+                    "1. buy price": str(today_open),
+                    "2. high": str(today_high),
+                    "3. low": str(today_low),
+                    "4. sell price": str(today_current),  # 현재가
+                    "5. volume": str(int(today_volume)),
+                    "6. current price": str(today_current),  # 명시적 현재가
+                    "7. is_realtime": "true"  # 실시간 데이터 플래그
+                }
+                time_series[today_str] = today_data
+        except Exception as e:
+            # 실시간 데이터 실패해도 과거 데이터는 유지
+            print(f"  ⚠️ Failed to fetch realtime data for {symbol}: {e}")
+
         result = {
             "Meta Data": {
                 "1. Information": "Daily Prices",

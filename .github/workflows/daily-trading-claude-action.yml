@@ -55,6 +55,7 @@ jobs:
           JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
           TRADING_DATE: ${{ inputs.trading_date }}
           USE_ALPACA: 'true'
+          USE_JINA_SEARCH: 'false'
           SIMULATION_MODE: 'false'
         run: |
           python fetch_market_news.py
@@ -151,9 +152,8 @@ jobs:
                         }
                       }]
                     }
-                 2. Then use Bash tool with this exact command:
+                 2. **Then use curl command** for webhook event:
                     curl -X POST "${{ secrets.DISCORD_WEBHOOK }}" -H "Content-Type: application/json" -d @/tmp/discord_message.json
-               - IMPORTANT: Using @/tmp/discord_message.json (file-based approach) prevents JSON escaping errors
 
             **CRITICAL REMINDERS**:
             - Base decisions on thorough fundamental analysis and news research
