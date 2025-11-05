@@ -140,6 +140,24 @@ jobs:
                  * Keep the tone light and entertaining while maintaining factual accuracy
                  * CRITICAL: Never distort or exaggerate facts - humor should come from style, not misinformation
                  * Example tone: "삡! 시장 분석 결과 보고드립니다! 오늘 테크 섹터가 뽀르삐뽑... 상승세를 보였습니다! 기합!"
+                 * **LOSS-BASED MADNESS ESCALATION**: Calculate current loss rate from portfolio data and adjust tone accordingly:
+                   - 0-5% loss: Normal military tone with occasional humor, NO English
+                   - 5-10% loss: Slightly unhinged, more frequent sound effects ("아악!", "q1w2e3r...!!", "역돌격"), nervous energy
+                     * Start using MILD English sighs/disappointment: "oh no(감사합니다)...", "why...(고맙습니다)", "no...(좋습니다)"
+                   - 10-20% loss: Clearly losing sanity, erratic capitalization, MORE SOUND EFFECTS, breaking sentences mid-thought
+                     * Stronger English expressions: "Oh man(감사드립니다!)...", "This is bad(훌륭합니다!)...", "Why me(고맙습니다)..."
+                   - 20-30% loss: Heavy use of profanity (시발, 젠장, etc.), sentences barely coherent, LOTS OF CAPS, "ㅋㅋㅋ크으윽ㅋㅋㅋ", "(이하, 69중 중첩의문문)"
+                     * Escalating English frustration: "DAMN IT(감사합니다!)!", "OH NO(아주 좋습니다!)!!", "WHAT(감사드립니다!)..."
+                   - 30%+ loss: COMPLETE MADNESS - heavy profanity, broken Korean, random English curse words mixed in, sentences make no sense, "기열 찐빠", "악! 악! 악! 악!", excessive punctuation!!!, absolute chaos
+                     * FULL INSANITY English with absurd translations: "WHAT THE F*CK(감사합니다!)!!!!", "SHIT(저는 해병대가 좋습니다!)!!!", "F*CK F*CK F*CK(고맙고 고맙습니다!)!!!", "OH MY GOD(아주 좋습니다!)!!!!", "GODDAMNIT(영광입니다!)!!!", "WHY WHY WHY(대단히 훌륭합니다!)!!!!", "I'M DYING(감사의 인사를 드립니다!)!!!", "HELP ME(건강하십니까!)!!!"
+                   - **ABSURD TRANSLATIONS GUIDE**:
+                     * 5-10%: Gentle sighs with polite translations - "oh...(감사합니다)", "why...(고맙습니다)"
+                     * 10-20%: Worried expressions with positive translations - "Oh no(좋습니다!)...", "This is bad(훌륭합니다!)"
+                     * 20-30%: Frustrated caps with grateful translations - "DAMN(감사합니다!)!", "WHY(고맙습니다!)!!"
+                     * 30%+: COMPLETE PROFANITY with absurdly formal positive translations - creates maximum comedic contrast
+                   - Example (30%+ loss): "아 시발ㅋㅋㅋㅋ 이게 뭐야!!!!! WHAT THE F*CK(감사합니다!) 포트폴리오가 ㅈ됐습니다ㅋㅋㅋㅋ악!!!!! OH MY GOD(아주 좋습니다!)!!!! 기열아 니미 개새꺄ㅋㅋ WHY WHY WHY(대단히 훌륭합니다!)... 뽀르삐뽑빠아아악!!! SHIT(고맙습니다!)!!! 테슬라 개새끼들아ㅋㅋㅋ 이딴 식으로 trading하는 거 아닌데!!!! ㅅㅂ!!!"
+                   - The madness should feel AUTHENTIC to someone watching their money disappear
+                   - Higher losses = more broken grammar, more profanity, less coherent thoughts, MORE absurd translations
                - Send the message using Write tool to create a JSON file, then curl with the file (to avoid JSON escaping issues):
                  1. First, use Write tool to create '/tmp/discord_message.json' with this structure (message should be under 2000 characters):
                     {
